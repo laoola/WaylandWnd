@@ -36,7 +36,6 @@
 #include <unistd.h>
 #include <vector>
 
-#include <cairo/cairo.h>
 #include <iostream>
 #include <png.h>
 #include <wayland-client.h>
@@ -158,8 +157,8 @@ static const struct xdg_wm_base_listener xdg_surface_listener = {handle_ping};
 static struct window*
 create_window(struct display* display, int width, int height)
 {
-    struct window*    window;
-    struct wl_region* region;
+    struct window*    window = NULL;
+    struct wl_region* region = NULL;
 
     window = (struct window*)zalloc(sizeof *window);
     if (!window)
@@ -210,7 +209,7 @@ static void destroy_window(struct window* window)
 
 static struct buffer* window_next_buffer(struct window* window)
 {
-    struct buffer* buffer;
+    struct buffer* buffer = NULL;
     int            ret = 0;
 
     if (!window->buffers[0].busy)
@@ -224,7 +223,6 @@ static struct buffer* window_next_buffer(struct window* window)
     {
         ret = create_shm_buffer(window->display, buffer, window->width,
                                 window->height, WL_SHM_FORMAT_ARGB8888);
-
         if (ret < 0)
             return NULL;
 
@@ -251,53 +249,54 @@ static void paint_pixels(void* image, int width, int height, uint32_t time)
 
     // 打开PNG文件
     // FILE *file = fopen("/home/zwh/Desktop/PrintWatermarkText.png", "rb");
-    FILE* file = fopen("/home/zwh/Desktop/test.png", "rb");
-    if (!file)
+    string strLoadPng = "/home/zwh/Desktop/test.png";
+    FILE* pFile = fopen(strLoadPng.c_str(), "rb");
+    if (!pFile)
     {
-        std::cerr << "Failed to open file" << std::endl;
+        std::cerr << "Failed to open file " <<strLoadPng<<std::endl;
         return;
     }
 
     // 创建PNG结构体和信息结构体
-    png_structp png_ptr =
+    png_structp pPngPtr =
         png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
-    if (!png_ptr)
+    if (!pPngPtr)
     {
         std::cerr << "Failed to create PNG read structure" << std::endl;
-        fclose(file);
+        fclose(pFile);
         return;
     }
 
-    png_infop info_ptr = png_create_info_struct(png_ptr);
-    if (!info_ptr)
+    png_infop pPngInfo = png_create_info_struct(pPngPtr);
+    if (!pPngInfo)
     {
         std::cerr << "Failed to create PNG info structure" << std::endl;
-        png_destroy_read_struct(&png_ptr, NULL, NULL);
-        fclose(file);
+        png_destroy_read_struct(&pPngPtr, NULL, NULL);
+        fclose(pFile);
         return;
     }
 
     // 设置PNG错误处理
-    if (setjmp(png_jmpbuf(png_ptr)))
+    if (setjmp(png_jmpbuf(pPngPtr)))
     {
         std::cerr << "Failed to set PNG error handler" << std::endl;
-        png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
-        fclose(file);
+        png_destroy_read_struct(&pPngPtr, &pPngInfo, NULL);
+        fclose(pFile);
         return;
     }
 
     // 初始化PNG读取
-    png_init_io(png_ptr, file);
-    png_set_sig_bytes(png_ptr, 0);
+    png_init_io(pPngPtr, pFile);
+    png_set_sig_bytes(pPngPtr, 0);
 
     // 读取PNG信息
-    png_read_info(png_ptr, info_ptr);
+    png_read_info(pPngPtr, pPngInfo);
 
     // 获取PNG图像属性
-    int Pngwidth   = png_get_image_width(png_ptr, info_ptr);
-    int Pngheight  = png_get_image_height(png_ptr, info_ptr);
-    int color_type = png_get_color_type(png_ptr, info_ptr);
-    int bit_depth  = png_get_bit_depth(png_ptr, info_ptr);
+    int Pngwidth   = png_get_image_width(pPngPtr, pPngInfo);
+    int Pngheight  = png_get_image_height(pPngPtr, pPngInfo);
+    int color_type = png_get_color_type(pPngPtr, pPngInfo);
+    int bit_depth  = png_get_bit_depth(pPngPtr, pPngInfo);
 
     // 确定要读取的像素格式
     png_bytep row_pointers[Pngheight];
@@ -308,7 +307,7 @@ static void paint_pixels(void* image, int width, int height, uint32_t time)
     }
     else if (color_type == PNG_COLOR_TYPE_GRAY && bit_depth < 8)
     {
-        png_set_expand_gray_1_2_4_to_8(png_ptr);
+        png_set_expand_gray_1_2_4_to_8(pPngPtr);
         bit_depth = 8;
     }
 
@@ -319,7 +318,7 @@ static void paint_pixels(void* image, int width, int height, uint32_t time)
     }
 
     // 读取PNG像素数据
-    png_read_image(png_ptr, row_pointers);
+    png_read_image(pPngPtr, row_pointers);
 
     // 输出每个像素的RGBA值
     for (int y = 0; y < Pngheight && y < height; y++)
@@ -339,8 +338,8 @@ static void paint_pixels(void* image, int width, int height, uint32_t time)
     {
         delete[] row_pointers[i];
     }
-    png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
-    fclose(file);
+    png_destroy_read_struct(&pPngPtr, &pPngInfo, NULL);
+    fclose(pFile);
 }
 
 // static struct wl_callback_listener frame_listener;

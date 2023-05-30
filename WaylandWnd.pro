@@ -12,7 +12,7 @@ LIBS += -lwayland-client -lpng -lm -lpthread
 SOURCES += \
         main.cpp \
         os-compatibility.cpp \
-        xdg-shell-protocols.c
+        xdg-shell-protocol.c
 
 HEADERS += \
     config.h \
